@@ -158,8 +158,8 @@ class AutoIndex {
 	}
 	
 	public function getRenderedCssTags(){
-		// TODO: make path and file configurable
-		$folderPath = '/moddir_autoindex/Resources/Public/css/';
+		// @TODO: make path and file configurable
+		$folderPath = '/___CGI___/moddir_autoindex/Resources/Public/css/';
 		$filePath = $folderPath.'styles.css';
 		$defaulTag = '<link rel="stylesheet" type="text/css" href="'.$filePath.'" />';
 		return $defaulTag;
@@ -170,9 +170,12 @@ class AutoIndex {
 	}
 	
 	public function getRenderedIndexHead(){
+		// @TODO: use template-file
+		// @TODO: make sortable
 		$cols = array();
 		$cols[] = '<th></th>'; // icon
 		$cols[] = '<th>Item</th>'; // item
+		$cols[] = '<th>Modified</th>'; // modified
 		$cols[] = '<th>Size</th>'; // size
 		$cols[] = '<th>Description</th>'; // description
 		return implode("\n",$cols);
@@ -198,10 +201,11 @@ class AutoIndex {
 				$itemConf['url'] = $this->getItemUrl($item);
 				$itemConf['link'] = $this->getRenderedItemLink($itemConf);
 				$itemConf['iconLink'] = $this->getRenderedItemIconLink($itemConf);
+				$itemConf['mtime'] = filemtime($this->fullRequestUri.$item);
 				if(is_file($this->fullRequestUri.$item)) {
-					// TODO:
-					$itemConf['size'] = 'asd';
-					$itemConf['description'] = 'asd';
+					$itemConf['size'] = number_format ( filesize($this->fullRequestUri.$item) , $decimals = 0 , $dec_point = "," , $thousands_sep = "." );
+					// @TODO:
+					$itemConf['description'] = $this->getFileDescription($item);
 				} else {
 					$itemConf['size'] = '';
 					$itemConf['description'] = '';
@@ -217,11 +221,14 @@ class AutoIndex {
 	}
 	
 	function renderItemRow($itemConf){
-		return  '<tr><td>'.$itemConf['iconLink'].
-				'</td><td>'.$itemConf['link'].
-				'</td><td>'.$itemConf['size'].
-				'</td><td>'.$itemConf['description'].
-				'</td></tr>'."\n";
+		// @TODO: use template-file
+		return  '<tr>'."\n".
+					"\t".'<td class="icon">'.$itemConf['iconLink'].'</td>'."\n".
+					"\t".'<td class="item">'.$itemConf['link'].'</td>'."\n".
+					"\t".'<td class="mtime"><span class="date">'.($itemConf['mtime'] > 0 ? strftime('%d.%m.%Y',(int) $itemConf['mtime']) : '').'</span>&nbsp;&nbsp;<span class="time">'.($itemConf['mtime'] > 0 ? strftime('%H:%M:%S',(int) $itemConf['mtime']) : '').'</span></td>'."\n".
+					"\t".'<td class="size">'.$itemConf['size'].'</td>'."\n".
+					"\t".'<td class="description">'.$itemConf['description'].'</td>'."\n".
+				'</tr>'."\n";
 	}
 	
 	protected function scandirSorted($dir){
@@ -331,7 +338,8 @@ class AutoIndex {
 		return $icon;
 	}
 
-	protected function is_link($item){
+	protected function isLink($item){
+		// @TODO:
 		// http://php.net/manual/en/function.is-link.php#83312
 		// on windows:
 		// http://php.net/manual/en/function.is-link.php#113263
@@ -363,13 +371,14 @@ class AutoIndex {
 			}
 			$n++;
 		} while($iconSuffixes[$n] && $n<=count($iconSuffixes)-1);
-		#echo $item."<br>\n";
-		#return $iconName; //($this->is_link($item) ? '[DIR LINK]' : '[DIR]');
+		// @TODO: add overlay to icon if symlink or without access-rights
+		#return $iconName; //($this->isLink($item) ? '[DIR LINK]' : '[DIR]');
+		// @TODO: make icon-size-configuration possible
 		$iconTag = '<img src="'.$iconFile.'" width="16" height="16" alt="" />';
 		return $iconTag;
 	}
 
-	protected function getFileIcon($item){
+	protected function getFileConfiguration($item){
 		$basename = pathinfo ( $item, PATHINFO_BASENAME);
 		#$item = str_replace('\\','/',$item);
 		$itemParts = explode('.',$basename);
@@ -397,24 +406,32 @@ class AutoIndex {
 			$suffix = $itemParts[ count($itemParts)-4 ].'.'.$itemParts[ count($itemParts)-3 ].'.'.$itemParts[ count($itemParts)-2 ].'.'.$itemParts[ count($itemParts)-1 ];
 			$key = '.'.$suffix;
 		}
-		/*
-		*/
 		if(!isset($key)){
+			$suffix = '';
 			$key = '^^UNKNOWN^^';
 		}
-		# echo '<h1>'.$item.'<br>'.$key.'</h1>';
-		
-		
-		
-		
-		
+		return $this->conf['items']['itemTypes'][$key];
+	}
+	
+	/**
+	 * getting icon-file by trying several suffixes (gif/png/...)
+	 * the first available icon is returned
+	 *
+	 * @param array $itemConf
+	 *
+	 * @return string iconFile
+	 */
+	protected function getAvailableIcon($itemConf){
 		$iconDir = $this->defaultIconUrlPath;
-		// '.xml' => array('iconName'=>'xml','description'=>'Extensible Markup Language'),
-		if(@isset($this->conf['items']['itemTypes'][$key]['iconName'])){
-			if(isset($this->conf['items']['itemTypes'][$key]['iconDir']) && is_dir($this->conf['items']['itemTypes'][$key]['iconDir'])){
-				$iconDir = $this->conf['items']['itemTypes'][$key]['iconDir'];
-			}
-			$iconName = $this->conf['items']['itemTypes'][$key]['iconName'];
+		if(!@isset($itemConf['iconName'])){
+			$iconName = $this->conf['items']['itemTypes']['^^UNKNOWN^^']['iconName'];
+		} else {
+			$iconName = $itemConf['iconName'];
+		}
+		if(@isset($itemConf['iconDir']) && is_dir($itemConf['iconDir'])){
+			$iconDir = $itemConf['iconDir'];
+		}
+		if(@isset($this->conf['items']['iconType'])){
 			$iconSuffixes = explode(',',$this->conf['items']['iconType']);
 			$n = 0;
 			$iconSuffix = '';
@@ -429,53 +446,54 @@ class AutoIndex {
 				$n++;
 			} while($iconSuffixes[$n] && $n<=count($iconSuffixes)-1);
 		}
+		return (@isset($iconFile) ? $iconFile : '');
+	}
+
+	protected function getFileDescription($item){
+		$itemConf = $this->getFileConfiguration($item);
+		$description = '';
+		if(@isset($itemConf['description'])){
+			$description = $itemConf['description'];
+		}
+		else {
+			$tmpKey = $itemConf!=='^^UNKNOWN^^' ? $itemConf : '';
+			if($tmpKey && @isset($this->mimeTypes[$tmpKey])){
+				$key = $this->mimeTypes[$tmpKey];
+				$description = $this->conf['items']['itemTypes'][$key]['description'];
+			}
+		}
+		if(!$description){
+			$description = @isset($this->conf['items']['itemTypes']['^^UNKNOWN^^']['description']) ? $this->conf['items']['itemTypes']['^^UNKNOWN^^']['description'] : '';
+		}
+		return $description;
+	}
+
+	protected function getFileIcon($item){
+		$itemConf = $this->getFileConfiguration($item);
+		if(@isset($itemConf['iconName'])){
+			$iconFile = $this->getAvailableIcon($itemConf);
+		}
 		else {
 			/*
-			// mime_content_type
-			// if(@isset())
+			// @TODO: add option to choose source of mime-info
 			$finfo = new finfo(FILEINFO_MIME, "/usr/share/misc/magic"); // return mime type ala mimetype extension
 			// get mime-type for a specific file
 			# $filename = "/usr/local/something.txt";
 			echo $finfo->file($item);
 			*/
-			
-			//require('mime_types.php');
-			
-			#if(!isset($suffix) && !isset($key)){
-			#	echo '<h1>'.$item.'</h1>';
-			#}
-			$tmpKey = isset($suffix) ? $suffix : $key;
+			$tmpKey = $itemConf!=='^^UNKNOWN^^' ? $itemConf : '';
 			if(@isset($this->mimeTypes[$tmpKey])){
 				$key = $this->mimeTypes[$tmpKey];
 				//echo basename.': '.$this->mimeTypes[$tmpKey].'<br>';
-				if(@isset($this->conf['items']['itemTypes'][ $key ]['iconName'])){
-					if(isset($this->conf['items']['itemTypes'][$key]['iconDir']) && is_dir($this->conf['items']['itemTypes'][$key]['iconDir'])){
-						$iconDir = $this->conf['items']['itemTypes'][$key]['iconDir'];
-					}
-					$iconName = $this->conf['items']['itemTypes'][$key]['iconName'];
-					$iconSuffixes = explode(',',$this->conf['items']['iconType']);
-					$n = 0;
-					$iconSuffix = '';
-					do {
-						$iconSuffix = $iconSuffixes[$n];
-						$iconFile = $iconDir.$iconName.'.'.$iconSuffix;
-						if(is_readable($iconFile)){
-							#echo '<h1>readable: '.$iconFile.'</h1>';
-							break;
-						} else {
-							unset($iconFile);
-						}
-						$n++;
-					} while($iconSuffixes[$n] && $n<count($iconSuffixes)-1);
-				}
+				$iconFile = $this->getAvailableIcon($key);
 			}
 		}
-		
-		#if(!isset($iconFile)){
-		#	$iconFile = $iconDir.$this->conf['items']['itemTypes']['^^UNKNOWN^^']['iconName'].'.png';
-		#}
-		
-		// echo '<br>$item:'.$item.'<br>$itemParts[1]:'.$itemParts[1].'<br>key:'.$key.'<br>$iconFile:'.$iconFile.'<br>';
+		if(!isset($iconFile)){
+			$iconFile = $this->getAvailableIcon('^^UNKNOWN^^');
+		}
+		// @TODO: make icon-size-configuration possible
+		// @TODO: make alt-attribute-configuration possible
+		// @TODO: make title-attribut-configuration possible
 		$iconTag = '<img src="'.$iconFile.'" width="16" height="16" alt="" />';
 		return $iconTag;
 		
