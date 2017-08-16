@@ -2,7 +2,7 @@
 
 $conf = array(
 	'defaultIconUrlPath' => '/icons/',
-	'defaultIconUriPath' => 'D:/xampp-win32-1.8.2-0-VC9/apache/icons/',
+	'defaultIconUriPath' => '/___CGI___/apache/icons/',
 	'imageMagick' => array(
 		'path' => 'C:\Program Files\ImageMagick-6.8.9-Q16\\',
 	),
@@ -43,8 +43,8 @@ $conf = array(
 			// '.d' => array('iconName'=>'d','description'=>''),
 			// '.diff' => array('iconName'=>'diff','description'=>''),
 			// '.h' => array('iconName'=>'h','description'=>''),
-			'.html' => array('iconName'=>'html','description'=>'Hypertext Markup Language'),
-			'.htm' => array('iconName'=>'html','description'=>'Hypertext Markup Language'),
+			'.html' => array('iconName'=>'layout','description'=>'Hypertext Markup Language'),
+			'.htm' => array('iconName'=>'layout','description'=>'Hypertext Markup Language'),
 			'.p' => array('iconName'=>'p','description'=>''),
 			'.patch' => array('iconName'=>'patch','description'=>''),
 			'.pdf' => array('iconName'=>'pdf','description'=>''),

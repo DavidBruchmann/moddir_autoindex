@@ -370,11 +370,12 @@ class AutoIndex {
 				unset($iconFile);
 			}
 			$n++;
-		} while($iconSuffixes[$n] && $n<=count($iconSuffixes)-1);
+		} while(isset($iconSuffixes[$n]) && $iconSuffixes[$n] && $n<=count($iconSuffixes)-1);
 		// @TODO: add overlay to icon if symlink or without access-rights
 		#return $iconName; //($this->isLink($item) ? '[DIR LINK]' : '[DIR]');
 		// @TODO: make icon-size-configuration possible
-		$iconTag = '<img src="'.$iconFile.'" width="16" height="16" alt="" />';
+		// @TODO: if $iconFile is not set, something is wrong in the configuration, maybe give hint or log it at least
+			$iconTag = '<img src="'.$iconFile.'" width="16" height="16" alt="" />';
 		return $iconTag;
 	}
 
@@ -444,7 +445,7 @@ class AutoIndex {
 					unset($iconFile);
 				}
 				$n++;
-			} while($iconSuffixes[$n] && $n<=count($iconSuffixes)-1);
+			} while(isset($iconSuffixes[$n]) && $iconSuffixes[$n] && $n<=count($iconSuffixes)-1);
 		}
 		return (@isset($iconFile) ? $iconFile : '');
 	}
